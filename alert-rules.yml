@@ -1,0 +1,69 @@
+groups:
+- name: observability-alerts
+  rules:
+
+  #  1. SERVICE DOWN
+  - alert: ServiceDown
+    expr: up == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Service Down"
+      description: "{{ $labels.job }} is not responding"
+
+  #  2. HIGH ERROR RATE
+  - alert: HighErrorRate
+    expr: |
+      (
+        sum(rate(http_requests_total{status=~"5.."}[5m]))
+        /
+        sum(rate(http_requests_total[5m]))
+      ) > 0.05
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High error rate"
+      description: "More than 5% of requests are failing"
+
+  #  3. HIGH CPU USAGE
+  - alert: HighCPUUsage
+    expr: |
+      sum by (container_label_com_docker_compose_service)(
+        rate(container_cpu_usage_seconds_total{
+          job="cadvisor",
+          id=~"/docker/.*"
+        }[5m])
+      ) > 0.8
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High CPU usage"
+      description: "CPU usage > 80% for {{ $labels.container_label_com_docker_compose_service }}"
+
+  #  4. HIGH MEMORY USAGE
+  - alert: HighMemoryUsage
+    expr: |
+      (
+        container_memory_usage_bytes
+        /
+        container_spec_memory_limit_bytes
+      ) > 0.9
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High memory usage"
+      description: "Memory usage > 90%"
+
+  #  5. TRACING PIPELINE FAILURE
+  - alert: TracePipelineDown
+    expr: otelcol_exporter_sent_spans == 0
+    for: 2m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Tracing pipeline failure"
+      description: "No traces exported to Jaeger"

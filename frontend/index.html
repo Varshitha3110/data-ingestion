@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Log Correlation Demo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+    }
+    .card {
+      background: #020617;
+      padding: 24px;
+      border-radius: 10px;
+      width: 360px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.4);
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 12px;
+      border-radius: 6px;
+      border: none;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+    .result, .logs {
+      margin-top: 16px;
+      font-size: 13px;
+      white-space: pre-line;
+    }
+    .logs {
+      color: #93c5fd;
+      max-width: 360px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>Distributed Trace Demo</h2>
+  <p>Enter a name and trigger backend flow</p>
+
+  <input id="name" placeholder="Enter name" />
+  <button onclick="submit()">Send Request</button>
+
+  <div class="result" id="result"></div>
+</div>
+
+<div class="logs" id="logs"></div>
+
+<script>
+  function log(msg) {
+    const logs = document.getElementById("logs");
+    const time = new Date().toLocaleTimeString();
+    logs.innerText += `[${time}] ${msg}\n`;
+    console.log(msg);
+  }
+
+  async function submit() {
+    const name = document.getElementById("name").value;
+    const result = document.getElementById("result");
+    const logs = document.getElementById("logs");
+
+    logs.innerText = "";
+    result.innerText = "";
+
+    if (!name) {
+      log("❌ Name is empty");
+      result.innerText = "Please enter a name";
+      return;
+    }
+
+    log("UI submit clicked");
+    log("Calling frontend service");
+
+    try {
+      const res = await fetch("/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+      });
+
+      log(`HTTP response received: ${res.status}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        log("❌ Backend returned error");
+        result.innerText = JSON.stringify(data, null, 2);
+        return;
+      }
+
+      log("✅ Request successful");
+      result.innerText =
+        "Success ✅\n\n" +
+        JSON.stringify(data, null, 2) +
+        "\n\nSearch Grafana using trace_id";
+
+    } catch (err) {
+      log("❌ Network error");
+      result.innerText = "Failed to reach frontend";
+    }
+  }
+</script>
+
+</body>
+</html>
